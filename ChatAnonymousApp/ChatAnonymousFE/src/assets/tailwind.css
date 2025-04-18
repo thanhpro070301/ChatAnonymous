@@ -1,0 +1,148 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    @apply font-sans;
+  }
+  body {
+    @apply bg-neuro-bg text-gray-800;
+  }
+  h1 {
+    @apply text-3xl font-bold text-primary-800;
+  }
+  h2 {
+    @apply text-2xl font-semibold text-primary-700;
+  }
+  h3 {
+    @apply text-xl font-medium text-primary-600;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center px-4 py-2 rounded font-medium transition-all duration-300;
+  }
+  .btn-primary {
+    @apply bg-primary text-white hover:bg-primary-600 hover:scale-105 active:scale-95;
+  }
+  .btn-secondary {
+    @apply bg-secondary text-white hover:bg-secondary-600 hover:scale-105 active:scale-95;
+  }
+  .btn-accent {
+    @apply bg-accent text-white hover:bg-accent-600 hover:scale-105 active:scale-95;
+  }
+  .btn-error {
+    @apply bg-error text-white hover:bg-error-600 hover:scale-105 active:scale-95;
+  }
+  .btn-ghost {
+    @apply bg-transparent hover:bg-gray-100 text-gray-700 hover:scale-105 active:scale-95;
+  }
+  
+  .card {
+    @apply bg-white rounded shadow p-4;
+  }
+  
+  .input {
+    @apply w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent;
+  }
+  
+  /* Neumorphic Designs */
+  .neuro-container {
+    @apply bg-neuro-bg rounded-2xl shadow-neuro transition-all duration-300;
+  }
+  
+  .neuro-container-inset {
+    @apply bg-neuro-bg rounded-2xl shadow-neuro-inset transition-all duration-300;
+  }
+  
+  .neuro-btn {
+    @apply bg-neuro-bg text-gray-700 rounded-xl shadow-neuro-flat px-4 py-2 transition-all duration-300 font-medium
+    hover:shadow-neuro active:shadow-neuro-inset focus:outline-none;
+  }
+  
+  .neuro-input {
+    @apply w-full px-4 py-2 bg-neuro-bg rounded-xl shadow-neuro-inset focus:outline-none
+    focus:ring-2 focus:ring-primary-500 transition-all duration-300;
+  }
+  
+  .neuro-card {
+    @apply bg-neuro-bg rounded-2xl shadow-neuro p-6 transition-all duration-300
+    hover:shadow-neuro-flat;
+  }
+  
+  /* Glassmorphism Designs */
+  .glass-container {
+    @apply bg-glass-white backdrop-blur-glass border border-white/30 rounded-2xl shadow-glass;
+  }
+  
+  .glass-card {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(209, 213, 219, 0.3);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+  
+  .dark .glass-card {
+    background: rgba(17, 25, 40, 0.75) !important;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(71, 85, 105, 0.3);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.1);
+  }
+  
+  .glass-btn {
+    @apply bg-glass-white text-gray-800 backdrop-blur-glass rounded-xl px-4 py-2 border border-white/30
+    shadow-md transition-all duration-300 hover:bg-white/80 active:scale-95;
+  }
+  
+  .glass-input {
+    @apply w-full px-4 py-2 bg-glass-white backdrop-blur-glass rounded-xl border border-white/30
+    shadow-inner focus:outline-none focus:border-primary/50 transition-all duration-300;
+  }
+  
+  /* Message Animations */
+  .message-user {
+    @apply animate-slide-left;
+  }
+  
+  .message-stranger {
+    @apply animate-slide-right;
+  }
+  
+  .message-system {
+    @apply animate-fade-in;
+  }
+  
+  /* Transition Animations */
+  .fade-enter-active,
+  .fade-leave-active {
+    @apply transition-opacity duration-300;
+  }
+  
+  .fade-enter-from,
+  .fade-leave-to {
+    @apply opacity-0;
+  }
+  
+  .slide-up-enter-active,
+  .slide-up-leave-active {
+    @apply transition-all duration-300;
+  }
+  
+  .slide-up-enter-from,
+  .slide-up-leave-to {
+    @apply -translate-y-4 opacity-0;
+  }
+  
+  /* Responsive Design Helpers */
+  .responsive-grid {
+    @apply grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6;
+  }
+  
+  .responsive-container {
+    @apply container mx-auto px-4 sm:px-6 lg:px-8;
+  }
+} 

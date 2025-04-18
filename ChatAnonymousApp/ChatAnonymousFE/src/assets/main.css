@@ -1,0 +1,138 @@
+/* Button styles */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1.5rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+  outline: none;
+}
+
+.btn-primary {
+  background-color: #4263eb;
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: #3b5bdb;
+}
+
+.btn-secondary {
+  background-color: #f1f3f5;
+  color: #495057;
+}
+
+.btn-secondary:hover {
+  background-color: #e9ecef;
+}
+
+.btn-danger {
+  background-color: #fa5252;
+  color: white;
+}
+
+.btn-danger:hover {
+  background-color: #e03131;
+}
+
+.btn svg {
+  margin-right: 0.4rem;
+}
+
+/* Form styles */
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.form-control {
+  width: 100%;
+  padding: 0.75rem;
+  font-size: 1rem;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  transition: border-color 0.2s;
+}
+
+.form-control:focus {
+  border-color: #4263eb;
+  outline: none;
+}
+
+/* Common card styles */
+.card {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.card-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: #343a40;
+}
+
+/* System message styling */
+.system-message {
+  text-align: center;
+  padding: 0.5rem 1rem;
+  background-color: #e9ecef;
+  border-radius: 4px;
+  margin: 0.5rem 0;
+  font-size: 0.85rem;
+  color: #495057;
+}
+
+/* Loading styles */
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.loading::after {
+  content: "";
+  width: 30px;
+  height: 30px;
+  border: 2px solid #e9ecef;
+  border-top-color: #4263eb;
+  border-radius: 50%;
+  animation: spinner 0.6s linear infinite;
+}
+
+@keyframes spinner {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Grid layout helpers */
+.grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.grid-cols-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+@media (max-width: 768px) {
+  .grid-cols-2 {
+    grid-template-columns: 1fr;
+  }
+} 
