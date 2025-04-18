@@ -95,9 +95,9 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             int payloadSize = payload.length();
             log.info("Message received from session {}, size: {} bytes", sessionId, payloadSize);
             
-            if (payloadSize > 750000) { // ~750KB limit
+            if (payloadSize > 50000000) { // Tăng giới hạn lên 50MB để hỗ trợ video
                 log.warn("Message too large from session {}, size: {} bytes", sessionId, payloadSize);
-                sendMessage(session, new Message("status", "Không thể xử lý tin nhắn vì kích thước quá lớn (tối đa 750KB)", "system", null));
+                sendMessage(session, new Message("status", "Không thể xử lý tin nhắn vì kích thước quá lớn (tối đa 50MB)", "system", null));
                 return;
             }
             
@@ -114,24 +114,42 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             // Kiểm tra xem tin nhắn có chứa dữ liệu hình ảnh không
             boolean hasImage = message.getImageData() != null && !message.getImageData().isEmpty();
             
-            if (hasImage) {
-                int imageSize = message.getImageData().length();
-                // Kiểm tra kích thước dữ liệu hình ảnh
-                if (imageSize > 500000) { // Giảm giới hạn xuống ~500KB
-                    log.warn("Image data too large from session {}: {} bytes", sessionId, imageSize);
-                    sendMessage(session, new Message("status", "Hình ảnh quá lớn, không thể gửi (tối đa 500KB)", "system", null));
-                    return;
+            // Kiểm tra xem tin nhắn có chứa dữ liệu video không
+            boolean hasVideo = message.getVideoData() != null && !message.getVideoData().isEmpty();
+            
+            // Ghi log cho tin nhắn có nội dung đa phương tiện
+            if (hasImage || hasVideo) {
+                if (hasImage) {
+                    int imageSize = message.getImageData().length();
+                    // Kiểm tra kích thước dữ liệu hình ảnh
+                    if (imageSize > 500000) { // Giảm giới hạn xuống ~500KB
+                        log.warn("Image data too large from session {}: {} bytes", sessionId, imageSize);
+                        sendMessage(session, new Message("status", "Hình ảnh quá lớn, không thể gửi (tối đa 500KB)", "system", null));
+                        return;
+                    }
+                    
+                    log.info("Message contains image data, size: {} bytes, type: {}, selfDestruct: {}, selfDestructTime: {}", 
+                            imageSize, message.getType(), message.getSelfDestruct(), message.getSelfDestructTime());
                 }
                 
-                // Ghi log thêm thông tin để debug
-                log.info("Message contains image data, size: {} bytes, type: {}, selfDestruct: {}, selfDestructTime: {}", 
-                        imageSize, message.getType(), message.getSelfDestruct(), message.getSelfDestructTime());
+                if (hasVideo) {
+                    int videoSize = message.getVideoData().length();
+                    // Kiểm tra kích thước dữ liệu video
+                    if (videoSize > 50000000) { // ~50MB limit
+                        log.warn("Video data too large from session {}: {} bytes", sessionId, videoSize);
+                        sendMessage(session, new Message("status", "Video quá lớn, không thể gửi (tối đa 50MB)", "system", null));
+                        return;
+                    }
+                    
+                    log.info("Message contains video data, size: {} bytes, type: {}, selfDestruct: {}, selfDestructTime: {}", 
+                            videoSize, message.getType(), message.getSelfDestruct(), message.getSelfDestructTime());
+                }
             }
             
             String partnerId = roomManager.getPartnerId(sessionId);
             
-            log.debug("Processing message type: {}, from session: {}, to partner: {}, has image: {}", 
-                   message.getType(), sessionId, partnerId, hasImage);
+            log.debug("Processing message type: {}, from session: {}, to partner: {}, has image: {}, has video: {}", 
+                   message.getType(), sessionId, partnerId, hasImage, hasVideo);
             
             try {
                 switch (message.getType()) {
@@ -147,11 +165,16 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                                 try {
                                     // Đảm bảo giữ nguyên thông tin về hình ảnh khi gửi đến người nhận
                                     Message outMessage = new Message(
-                                        hasImage ? "message" : message.getType(), 
+                                        hasImage || hasVideo ? "message" : message.getType(), 
                                         message.getContent(), 
                                         "stranger", 
                                         message.getImageData()
                                     );
+                                    
+                                    // Thêm dữ liệu video nếu có
+                                    if (hasVideo) {
+                                        outMessage.setVideoData(message.getVideoData());
+                                    }
                                     
                                     // Thêm các trường mới nếu có
                                     if (message.getSenderId() != null) {
@@ -172,9 +195,9 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                                     }
                                     
                                     // Log the full outgoing message for debugging
-                                    log.info("Outgoing message to partner {}: type={}, hasImage={}, selfDestruct={}, selfDestructTime={}", 
+                                    log.info("Outgoing message to partner {}: type={}, hasImage={}, hasVideo={}, selfDestruct={}, selfDestructTime={}", 
                                             partnerId, outMessage.getType(), (outMessage.getImageData() != null), 
-                                            outMessage.getSelfDestruct(), outMessage.getSelfDestructTime());
+                                            (outMessage.getVideoData() != null), outMessage.getSelfDestruct(), outMessage.getSelfDestructTime());
                                     
                                     // Gửi tin nhắn và kiểm tra kết quả
                                     boolean sent = sendMessage(partnerSession, outMessage);
@@ -299,38 +322,75 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     }
     
     private void notifyPartnerLeft(String partnerId) {
-        if (sessions.containsKey(partnerId)) {
+        if (partnerId != null && sessions.containsKey(partnerId)) {
             WebSocketSession partnerSession = sessions.get(partnerId).getSocket();
-            sendMessage(partnerSession, new Message("leave", "Người lạ đã rời đi", "system", null));
+            // Check if session is still open before sending message
+            if (partnerSession != null && partnerSession.isOpen()) {
+                sendMessage(partnerSession, new Message("leave", "Người lạ đã rời đi", "system", null));
+            } else {
+                log.warn("Partner session {} is already closed, can't notify about leaving", partnerId);
+            }
         }
     }
     
     private boolean sendMessage(WebSocketSession session, Message message) {
         try {
-            if (session != null && session.isOpen()) {
-                String messageJson = objectMapper.writeValueAsString(message);
+            if (session == null || !session.isOpen()) {
+                log.warn("Cannot send message - WebSocket session is null or closed");
+                return false;
+            }
+            
+            String messageJson = objectMapper.writeValueAsString(message);
+            
+            // Kiểm tra kích thước tin nhắn trước khi gửi
+            if (messageJson.length() > 750000) {
+                log.warn("Message too large to send, size: {} bytes", messageJson.length());
                 
-                // Kiểm tra kích thước tin nhắn trước khi gửi
-                if (messageJson.length() > 750000) {
-                    log.warn("Message too large to send, size: {} bytes", messageJson.length());
+                // Nếu có hình ảnh, thử gửi tin nhắn không có hình ảnh
+                if (message.getImageData() != null && !message.getImageData().isEmpty()) {
+                    log.info("Attempting to send message without image data");
+                    message.setImageData(null);
+                    message.setContent(message.getContent() + " [Hình ảnh quá lớn, không thể gửi]");
+                    String reducedJson = objectMapper.writeValueAsString(message);
                     
-                    // Nếu có hình ảnh, thử gửi tin nhắn không có hình ảnh
-                    if (message.getImageData() != null && !message.getImageData().isEmpty()) {
-                        log.info("Attempting to send message without image data");
-                        message.setImageData(null);
-                        message.setContent(message.getContent() + " [Hình ảnh quá lớn, không thể gửi]");
-                        String reducedJson = objectMapper.writeValueAsString(message);
+                    // Check session again before sending
+                    if (session.isOpen()) {
                         session.sendMessage(new TextMessage(reducedJson));
                         return true;
+                    } else {
+                        log.warn("WebSocket session closed while trying to send reduced image message");
+                        return false;
                     }
-                    
-                    return false;
                 }
                 
+                // Nếu có video, thử gửi tin nhắn không có video
+                if (message.getVideoData() != null && !message.getVideoData().isEmpty()) {
+                    log.info("Attempting to send message without video data");
+                    message.setVideoData(null);
+                    message.setContent(message.getContent() + " [Video quá lớn, không thể gửi]");
+                    String reducedJson = objectMapper.writeValueAsString(message);
+                    
+                    // Check session again before sending
+                    if (session.isOpen()) {
+                        session.sendMessage(new TextMessage(reducedJson));
+                        return true;
+                    } else {
+                        log.warn("WebSocket session closed while trying to send reduced video message");
+                        return false;
+                    }
+                }
+                
+                return false;
+            }
+            
+            // Final check before sending
+            if (session.isOpen()) {
                 session.sendMessage(new TextMessage(messageJson));
                 return true;
+            } else {
+                log.warn("WebSocket session closed before sending message");
+                return false;
             }
-            return false;
         } catch (IOException e) {
             log.error("Error sending message: {}", e.getMessage(), e);
             return false;

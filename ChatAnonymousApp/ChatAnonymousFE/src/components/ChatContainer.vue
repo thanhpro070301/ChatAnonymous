@@ -154,12 +154,48 @@
                   <!-- Video message -->
                   <div v-if="msg.videoData" class="mb-1.5 sm:mb-2">
                     <video 
-                      :src="msg.videoData" 
+                      :key="msg.id + '_video'"
+                      :src="ensureVideoFormat(msg.videoData)" 
                       class="max-w-full rounded-lg cursor-pointer hover:opacity-95 transition-opacity"
                       controls
-                      style="max-height: 300px;"
+                      preload="metadata"
+                      width="100%"
+                      style="max-height: 300px; background-color: rgba(0,0,0,0.05);"
+                      @click="playVideo"
+                      @loadeddata="videoLoaded"
+                      @error="videoError"
+                      crossorigin="anonymous"
+                      playsinline
+                      type="video/mp4"
                     ></video>
                     <p v-if="msg.content" class="mt-1.5 sm:mt-2 whitespace-pre-line text-xs sm:text-sm">{{ msg.content }}</p>
+                    
+                    <!-- Self-destruct indicator -->
+                    <div v-if="msg.selfDestruct && !msg.viewStarted && msg.sender !== 'user'" 
+                      class="flex items-center mt-1 text-2xs sm:text-xs text-red-500">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                      <span>Video sẽ tự hủy sau {{ msg.selfDestructTime }} giây</span>
+                    </div>
+                    
+                    <!-- Self-destruct countdown -->
+                    <div v-if="msg.viewStarted && !msg.isDestroyed" 
+                      class="flex items-center mt-1 text-2xs sm:text-xs text-red-500 animate-pulse">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span>Tự hủy sau {{ msg.countdown || msg.selfDestructTime }} giây</span>
+                    </div>
+                    
+                    <!-- Destroyed indicator -->
+                    <div v-if="msg.isDestroyed" 
+                      class="flex items-center mt-1 text-2xs sm:text-xs text-gray-500">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                      <span>Video đã tự hủy</span>
+                    </div>
                   </div>
                   
                   <div class="message-meta flex items-center justify-end mt-0.5 sm:mt-1 space-x-1">
@@ -971,6 +1007,17 @@ export default {
                 document.title = `(${this.unreadMessages}) Chat Anonymous`;
               }
               
+              // Ensure video data is properly formatted with correct content type
+              let processedVideoData = message.videoData;
+              if (processedVideoData && !processedVideoData.startsWith('data:video')) {
+                try {
+                  console.log('Reformatting video data to correct MIME type');
+                  processedVideoData = 'data:video/mp4;base64,' + processedVideoData.replace(/^data:.*?;base64,/, '');
+                } catch (e) {
+                  console.error('Error reformatting video data:', e);
+                }
+              }
+              
               const newMessage = {
                 id: message.id || 'msg-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
                 sender: message.sender,
@@ -978,7 +1025,7 @@ export default {
                 imageData: message.imageData,
                 fileData: message.fileData,
                 voiceData: message.voiceData,
-                videoData: message.videoData,
+                videoData: processedVideoData,
                 fileName: message.fileName,
                 fileType: message.fileType,
                 fileSize: message.fileSize,
@@ -1002,6 +1049,13 @@ export default {
               
               // Start countdown for self-destructing images immediately
               if (message.imageData && message.selfDestruct) {
+                // Start the countdown immediately without requiring viewing
+                newMessage.viewStarted = true;
+                this.startCountdownForMessage(newMessage.id, message.selfDestructTime);
+              }
+              
+              // Start countdown for self-destructing videos immediately
+              if (message.videoData && message.selfDestruct) {
                 // Start the countdown immediately without requiring viewing
                 newMessage.viewStarted = true;
                 this.startCountdownForMessage(newMessage.id, message.selfDestructTime);
@@ -1095,6 +1149,20 @@ export default {
               targetMsg.viewStarted = false;
               targetMsg.countdown = 0;
               targetMsg.imageData = null; // Clear the image data to free memory
+            }
+          }
+          break;
+          
+        case 'video_destroyed':
+          // Handle video destruction notification
+          if (message.messageId) {
+            const targetMsg = this.messages.find(msg => msg.id === message.messageId);
+            if (targetMsg) {
+              console.log('Video destroyed for message ID:', message.messageId);
+              targetMsg.isDestroyed = true;
+              targetMsg.viewStarted = false;
+              targetMsg.countdown = 0;
+              targetMsg.videoData = null; // Clear the video data to free memory
             }
           }
           break;
@@ -2016,6 +2084,17 @@ export default {
       }
     },
     
+    sendVideoDestroyedNotification(messageId) {
+      if (this.socket && this.isPaired) {
+        const notification = {
+          type: 'video_destroyed',
+          messageId: messageId,
+          sender: 'user'
+        };
+        this.socket.send(JSON.stringify(notification));
+      }
+    },
+    
     generateMessageId() {
       return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
     },
@@ -2142,13 +2221,24 @@ export default {
         if (message.countdown <= 0) {
           clearInterval(this[intervalKey]);
           
-          // Destroy the image
+          // Destroy the message content
           message.isDestroyed = true;
-          message.imageData = null;
           
-          // Notify the sender
-          if (message.sender !== 'user') {
-            this.sendImageDestroyedNotification(messageId);
+          // Clear the appropriate data based on message type
+          if (message.imageData) {
+            message.imageData = null;
+            // Notify the sender about image destruction
+            if (message.sender !== 'user') {
+              this.sendImageDestroyedNotification(messageId);
+            }
+          }
+          
+          if (message.videoData) {
+            message.videoData = null;
+            // Notify the sender about video destruction
+            if (message.sender !== 'user') {
+              this.sendVideoDestroyedNotification(messageId);
+            }
           }
         }
       }, 1000);
@@ -2233,15 +2323,27 @@ export default {
       
       console.log("Sending video message, size:", this.selectedVideo.length);
       
-      // Create the message
-      const message = {
-        type: 'message',
-        content: this.newMessage,
-        videoData: this.selectedVideo,
-        timestamp: new Date().getTime()
-      };
-      
+      // Make sure video data is properly formatted
+      let videoData = this.selectedVideo;
       try {
+        // Ensure proper video data format for transmission
+        if (!videoData.startsWith('data:video')) {
+          console.log("Reformatting video data for sending");
+          videoData = 'data:video/mp4;base64,' + videoData.replace(/^data:.*?;base64,/, '');
+        }
+        
+        // Create the message
+        const messageId = this.generateMessageId();
+        const message = {
+          type: 'message',
+          id: messageId,
+          content: this.newMessage,
+          videoData: videoData,
+          selfDestruct: this.isSelfDestruct === true,
+          selfDestructTime: this.isSelfDestruct ? parseInt(this.selfDestructTime, 10) : null,
+          timestamp: new Date().getTime()
+        };
+        
         // Convert to JSON and check size
         const jsonMessage = JSON.stringify(message);
         console.log("Video message JSON size:", jsonMessage.length, "bytes");
@@ -2257,9 +2359,14 @@ export default {
         
         // Add to local messages
         this.messages.push({
-          id: this.generateMessageId(),
+          id: messageId,
           content: this.newMessage,
-          videoData: this.selectedVideo,
+          videoData: videoData,
+          selfDestruct: this.isSelfDestruct === true,
+          selfDestructTime: this.isSelfDestruct ? parseInt(this.selfDestructTime, 10) : null,
+          viewStarted: false,
+          isDestroyed: false,
+          countdown: this.isSelfDestruct ? parseInt(this.selfDestructTime, 10) : null,
           timestamp: message.timestamp,
           sender: 'user'
         });
@@ -2345,6 +2452,115 @@ export default {
     fetchStats() {
       // Implement stats fetching logic
       console.log('Fetching stats...');
+    },
+    
+    playVideo(event) {
+      const video = event.target;
+      
+      // Start playing if paused, or pause if playing
+      if (video.paused) {
+        video.play().catch(error => {
+          console.error('Error playing video:', error);
+          this.showToast('Không thể phát video. Vui lòng thử lại.');
+        });
+      } else {
+        video.pause();
+      }
+      
+      // Ensure video is displayed at full quality
+      if (video.videoWidth === 0 || video.videoHeight === 0) {
+        // If video dimensions aren't available yet, try loading the video
+        video.load();
+      }
+    },
+    
+    videoLoaded(event) {
+      console.log('Video loaded successfully:', event.target.videoWidth + 'x' + event.target.videoHeight, 
+                 'Duration:', event.target.duration,
+                 'Source:', event.target.currentSrc);
+    },
+    
+    videoError(event) {
+      const video = event.target;
+      let errorMessage = '';
+      
+      switch (video.error.code) {
+        case MediaError.MEDIA_ERR_ABORTED:
+          errorMessage = 'Bạn đã dừng video.';
+          break;
+        case MediaError.MEDIA_ERR_NETWORK:
+          errorMessage = 'Lỗi mạng khi tải video.';
+          break;
+        case MediaError.MEDIA_ERR_DECODE:
+          errorMessage = 'Không thể giải mã video.';
+          break;
+        case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
+          errorMessage = 'Định dạng video không được hỗ trợ.';
+          break;
+        default:
+          errorMessage = 'Lỗi không xác định khi tải video.';
+      }
+      
+      console.error('Video error:', errorMessage, video.error);
+      this.showToast(errorMessage);
+    },
+    handleWebSocketMessage(event) {
+      try {
+        const message = JSON.parse(event.data);
+        console.log('Received message type:', message.type);
+        
+        // Log all fields for debug (except large data)
+        const debugMessage = { ...message };
+        if (debugMessage.imageData) debugMessage.imageData = `[Image data (${debugMessage.imageData.length} chars)]`;
+        if (debugMessage.videoData) debugMessage.videoData = `[Video data (${debugMessage.videoData.length} chars)]`;
+        if (debugMessage.fileData) debugMessage.fileData = `[File data (${debugMessage.fileData.length} chars)]`;
+        if (debugMessage.voiceData) debugMessage.voiceData = `[Voice data (${debugMessage.voiceData.length} chars)]`;
+        console.log('Message details:', debugMessage);
+        
+        // If the message relates to a message we already have, and there's no additional data,
+        // just update the existing message to save memory
+        if (message.id && message.type === 'status' && 
+            message.sender !== 'system' && 
+            !message.imageData && !message.videoData && !message.fileData && !message.voiceData) {
+          
+          const existingMessage = this.messages.find(m => m.id === message.id);
+          if (existingMessage) {
+            Object.assign(existingMessage, {
+              ...message,
+              sender: message.sender,
+              selfDestruct: message.selfDestruct,
+              selfDestructTime: message.selfDestructTime,
+            });
+            
+            if (message.selfDestruct) {
+              console.log('Image has self-destruct enabled, time:', message.selfDestructTime, 'seconds');
+            }
+            
+            return; // Skip adding a new message
+          }
+        }
+        
+        // Check for a valid updateMessageId and update existing message instead of adding a new one
+        if (message.updateMessageId) {
+          const targetMsg = this.messages.find(msg => msg.id === message.updateMessageId);
+          if (targetMsg) {
+            // Only update specific fields
+            if (message.status) targetMsg.status = message.status;
+            if (message.reactions) targetMsg.reactions = message.reactions;
+            if (message.isRead !== undefined) targetMsg.isRead = message.isRead;
+            
+            return; // Skip adding a new message
+          }
+        }
+      } catch (error) {
+        console.error('Error handling WebSocket message:', error);
+      }
+    },
+    ensureVideoFormat(videoData) {
+      if (!videoData.startsWith('data:video')) {
+        return 'data:video/mp4;base64,' + videoData.replace(/^data:.*?;base64,/, '');
+      }
+      return videoData;
     }
   },
   

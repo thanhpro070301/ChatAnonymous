@@ -12,6 +12,7 @@ public class Message {
     private String content;
     private String sender;
     private String imageData; // Base64 encoded image data
+    private String videoData; // Base64 encoded video data
     private String senderId; // ID của người gửi, hỗ trợ xác định khi reload
     private String receiver; // Người nhận tin nhắn
     private Boolean selfDestruct; // Whether the image should self-destruct
@@ -23,6 +24,7 @@ public class Message {
         this.content = content;
         this.sender = sender;
         this.imageData = imageData;
+        this.videoData = null;
         this.senderId = null;
         this.receiver = null;
         this.selfDestruct = false;
