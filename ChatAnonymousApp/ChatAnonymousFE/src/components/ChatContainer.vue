@@ -102,7 +102,7 @@
       <div v-if="isConnecting" class="loading-overlay">
         <div class="loading-spinner">
           <div class="w-16 h-16 sm:w-20 sm:h-20 border-4 border-secondary-300/30 border-t-secondary-500 rounded-full animate-spin mb-4"></div>
-          <div class="loading-text flex flex-col items-center">
+          <div class="loading-text">
             <span class="text-base sm:text-lg font-medium text-secondary-600 dark:text-secondary-400 mb-2">Đang kết nối...</span>
             <span class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Đang tìm máy chủ gần nhất</span>
           </div>
@@ -3050,14 +3050,33 @@ export default {
 /* Loading overlay should fill the container */
 .loading-overlay {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
+  background-color: rgba(255, 255, 255, 0.8);
   z-index: 10;
+}
+
+.loading-spinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.loading-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  width: 100%;
+}
+
+.dark .loading-overlay {
+  background-color: rgba(0, 0, 0, 0.7);
 }
 
 /* Make sure input area is properly sized */
