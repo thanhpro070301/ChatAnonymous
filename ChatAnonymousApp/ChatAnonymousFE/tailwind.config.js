@@ -101,6 +101,12 @@ module.exports = {
         'pulse-slow': 'pulse 3s infinite',
         'slide-up': 'slideUp 0.3s ease-out forwards',
         'fade-in': 'fadeIn 0.5s ease-out forwards',
+        'slide-left': 'slideLeft 0.4s ease-out forwards',
+        'slide-right': 'slideRight 0.4s ease-out forwards',
+        'draw-path': 'drawPath 1.5s ease-in-out forwards',
+        'orbit': 'orbit 3s linear infinite',
+        'ping-slow': 'ping 3s cubic-bezier(0, 0, 0.2, 1) infinite',
+        'media-appear': 'mediaAppear 0.5s ease-out forwards',
       },
       keyframes: {
         slideUp: {
@@ -110,6 +116,27 @@ module.exports = {
         fadeIn: {
           '0%': { opacity: 0 },
           '100%': { opacity: 1 },
+        },
+        slideLeft: {
+          '0%': { opacity: 0, transform: 'translateX(-20px)' },
+          '100%': { opacity: 1, transform: 'translateX(0)' },
+        },
+        slideRight: {
+          '0%': { opacity: 0, transform: 'translateX(20px)' },
+          '100%': { opacity: 1, transform: 'translateX(0)' },
+        },
+        mediaAppear: {
+          '0%': { opacity: 0, transform: 'translateY(8px) scale(0.98)' },
+          '100%': { opacity: 1, transform: 'translateY(0) scale(1)' },
+        },
+        drawPath: {
+          '0%': { strokeDashoffset: '1000' },
+          '100%': { strokeDashoffset: '0' },
+        },
+        orbit: {
+          '0%': { transform: 'translateX(-50%) translateY(-120%) rotate(0deg)' },
+          '50%': { transform: 'translateX(150%) translateY(120%) rotate(180deg)' },
+          '100%': { transform: 'translateX(-50%) translateY(-120%) rotate(360deg)' },
         },
       },
       transitionProperty: {

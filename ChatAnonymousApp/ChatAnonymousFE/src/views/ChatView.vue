@@ -1,9 +1,9 @@
 <template>
-  <div class="h-[calc(100vh-4rem)] p-0 flex flex-col">
-    <div class="flex flex-1 h-full">
-      <div class="flex-1 overflow-hidden">
+  <div class="h-screen p-0 flex flex-col overflow-hidden bg-white dark:bg-black">
+    <div class="flex flex-1 h-full w-full">
+      <div class="flex-1 overflow-hidden w-full">
         <transition name="fade" mode="out-in">
-          <div class="h-full overflow-hidden bg-[#f0f2f5] dark:bg-black rounded-xl shadow-md dark:shadow-none">
+          <div class="h-full w-full overflow-hidden bg-white dark:bg-black">
             <ChatContainer />
           </div>
         </transition>
@@ -35,12 +35,6 @@ export default {
   transform: scale(0.95);
 }
 
-@media (max-width: 640px) {
-  .h-\[calc\(100vh-4rem\)\] {
-    height: calc(100vh - 4rem);
-  }
-}
-
 /* Ensure the component stretches to full available height */
 html, body {
   height: 100%;
@@ -49,10 +43,8 @@ html, body {
   overflow: hidden;
 }
 
-/* Dark mode specific fixes */
-:deep(.dark) .rounded-xl {
-  background-color: #000000 !important;
-  border: none !important;
-  outline: none !important;
+/* Hide any fixed bottom button elements */
+:deep(.fixed-bottom) {
+  display: none !important;
 }
 </style> 

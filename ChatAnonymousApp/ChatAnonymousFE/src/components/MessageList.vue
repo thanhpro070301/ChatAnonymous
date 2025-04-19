@@ -1,19 +1,24 @@
 <template>
   <div class="message-list-container" ref="messagesContainer">
     <!-- Connection status -->
-    <div v-if="!isPaired && !isSearching" class="connection-status">
-      <div class="status-icon disconnected">
-        <i class="fas fa-plug"></i>
-      </div>
-      <div class="status-text">
-        <p>Bạn chưa kết nối với ai</p>
+    <div v-if="!isPaired && !isSearching" class="connection-status not-connected">
+      <div class="status-content">
+        <div class="status-icon-container">
+          <div class="status-icon disconnected pulse-animation">
+            <i class="fas fa-comments"></i>
+          </div>
+        </div>
+        <div class="status-text">
+          <h3>Chưa có cuộc trò chuyện nào</h3>
+          <p>Bấm nút bên dưới để tìm người trò chuyện ngẫu nhiên</p>
+        </div>
         <button @click="findNewPartner" class="find-button">
-          <i class="fas fa-search"></i> Tìm người trò chuyện
+          <i class="fas fa-search"></i> Tìm người mới
         </button>
       </div>
     </div>
     
-    <div v-if="isSearching" class="connection-status">
+    <div v-if="isSearching" class="connection-status searching">
       <div class="status-icon searching">
         <i class="fas fa-spinner fa-spin"></i>
       </div>
@@ -234,38 +239,118 @@ export default {
 .connection-status {
   display: flex;
   align-items: center;
-  padding: 16px;
-  background: rgba(0, 0, 0, 0.05);
-  border-radius: 8px;
-  margin-bottom: 16px;
+  justify-content: center;
+  padding: 2rem;
+  border-radius: 12px;
+  margin: 1rem auto;
+  width: 100%;
+  max-width: 500px;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.connection-status.not-connected {
+  background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%);
+}
+
+.connection-status.searching {
+  background: linear-gradient(135deg, #fff9c4 0%, #fff59d 100%);
+}
+
+.status-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.status-icon-container {
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: white;
+  border-radius: 50%;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .status-icon {
-  font-size: 24px;
-  margin-right: 16px;
+  font-size: 2.5rem;
+  margin-right: 0;
+  height: 4rem;
+  width: 4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.status-text {
+  margin-bottom: 1.5rem;
+}
+
+.status-text h3 {
+  font-size: 1.4rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: #333;
+}
+
+.status-text p {
+  color: #666;
+  margin-bottom: 1rem;
+  font-size: 1rem;
 }
 
 .status-icon.disconnected {
-  color: #ff5252;
+  color: #5c6bc0;
 }
 
 .status-icon.searching {
-  color: #ffc107;
+  color: #ffa726;
+}
+
+.pulse-animation {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(0.95);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(0.95);
+  }
 }
 
 .find-button {
-  margin-top: 8px;
-  padding: 8px 16px;
-  background: #4285f4;
+  margin-top: 0.5rem;
+  padding: 0.8rem 2rem;
+  background: linear-gradient(135deg, #42a5f5 0%, #2196f3 100%);
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 50px;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.3s ease;
+  font-size: 1rem;
+  font-weight: 500;
+  box-shadow: 0 4px 8px rgba(33, 150, 243, 0.3);
 }
 
 .find-button:hover {
-  background: #2a75f3;
+  background: linear-gradient(135deg, #2196f3 0%, #1e88e5 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(33, 150, 243, 0.4);
+}
+
+.find-button:active {
+  transform: translateY(0);
+  box-shadow: 0 3px 6px rgba(33, 150, 243, 0.3);
+}
+
+.find-button i {
+  margin-right: 8px;
 }
 
 .messages {

@@ -11,13 +11,42 @@
         }"></div>
         <h2 class="text-xs sm:text-sm md:text-base font-semibold truncate dark:text-gray-100 max-w-[100px] xs:max-w-[150px] sm:max-w-[200px] md:max-w-xs">
           <span v-if="isConnected && !isPaired && !isSearching" class="flex items-center">
-            <span class="glass-btn dark:glass-btn-dark inline-flex items-center px-1.5 sm:px-2.5 py-1 sm:py-1.5 rounded-lg shadow-sm hover:shadow text-2xs sm:text-xs">
+            <span class="glass-btn dark:glass-btn-dark inline-flex items-center px-1.5 sm:px-2.5 py-1 sm:py-1.5 rounded-lg shadow-sm hover:shadow text-2xs sm:text-xs relative overflow-hidden">
               <span class="h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-violet-500 mr-1 sm:mr-2 animate-pulse"></span>
               <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-0.5 sm:mr-1 text-secondary-600 dark:text-secondary-400" viewBox="0 0 20 20" fill="currentColor">
-                <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
+                <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM8 9a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z" />
               </svg>
-              <span class="font-medium text-secondary-600 dark:text-secondary-400">{{ onlineCount }}</span>
-              <span class="ml-0.5 text-secondary-600 dark:text-secondary-400">online</span>
+              <span class="font-medium text-secondary-600 dark:text-secondary-400 relative z-10">{{ onlineCount }}</span>
+              <span class="ml-0.5 text-secondary-600 dark:text-secondary-400 relative z-10">online</span>
+              
+              <!-- Flying users animation -->
+              <div class="absolute inset-0 pointer-events-none">
+                <div v-for="i in 5" :key="i"
+                  class="absolute w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full user-flying-avatar"
+                  :class="`user-particle-${i}`"
+                  :style="{
+                    animationDelay: `${i * 0.7}s`,
+                    left: `${10 + (i * 15)}%`,
+                    top: `${50 + (i % 2 === 0 ? -10 : 10)}%`,
+                    backgroundColor: ['#9333EA', '#6366F1', '#3B82F6', '#10B981', '#F59E0B'][i-1]
+                  }">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-full h-full text-white">
+                    <path d="M10 8a3 3 0 100-6 3 3 0 000 6zM3.465 14.493a1.23 1.23 0 00.41 1.412A9.957 9.957 0 0010 18c2.31 0 4.438-.784 6.131-2.1.43-.333.604-.903.408-1.41a7.002 7.002 0 00-13.074.003z" />
+                  </svg>
+                </div>
+              </div>
+              
+              <!-- Additional sparkle effects -->
+              <div class="absolute inset-0 pointer-events-none overflow-hidden">
+                <div v-for="i in 3" :key="`sparkle-${i}`"
+                  class="absolute w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-yellow-300 dark:bg-yellow-200 sparkle-effect"
+                  :style="{
+                    animationDelay: `${i * 1.2}s`,
+                    left: `${20 + (i * 25)}%`,
+                    top: `${i * 25}%`
+                  }">
+                </div>
+              </div>
             </span>
           </span>
           <span v-else>
@@ -81,20 +110,89 @@
       </div>
       
       <!-- Chat messages -->
-      <div v-if="isPaired || (!isPaired && messages.length > 0 && !isSearching)" class="flex-1 overflow-y-auto p-2 sm:p-4 md:p-6 messages-container dark:bg-gray-800/90 relative" ref="chatMessages">
+      <div v-else-if="isPaired || (!isPaired && messages.length > 0 && !isSearching)" 
+           :class="{'flex-1 overflow-y-auto p-2 sm:p-4 md:p-6 messages-container dark:bg-gray-800/90 relative': true,
+                    'flex flex-col items-center justify-center': !isPaired && messages.some(msg => msg.content && msg.content.includes('hủy tìm kiếm'))}" 
+           ref="chatMessages">
+        
+        <!-- Full Screen Centered Cancel Search Message -->
+        <div v-if="!isPaired && messages.some(msg => msg.content && msg.content.includes('hủy tìm kiếm'))" 
+             class="w-full h-full flex flex-col items-center justify-center">
+          <div class="enhanced-system-message px-6 py-5 rounded-2xl max-w-md animate-fade-in">
+            <div class="flex flex-col items-center justify-center">
+              <!-- Icon animation -->
+              <div class="relative w-20 h-20 mb-4">
+                <div class="absolute inset-0 bg-gradient-to-r from-indigo-300 to-purple-300 dark:from-indigo-600 dark:to-purple-600 rounded-full opacity-20 blur-md animate-pulse"></div>
+                <div class="relative flex items-center justify-center w-full h-full">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-indigo-500 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+              </div>
+              
+              <!-- Message title -->
+              <h4 class="text-xl font-semibold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 mb-3">
+                Đã hủy tìm kiếm
+              </h4>
+              
+              <!-- Message content -->
+              <p class="text-base text-gray-600 dark:text-gray-300 text-center mb-4">
+                Bấm nút "Tìm người mới" khi bạn muốn tìm người trò chuyện.
+              </p>
+              
+              <!-- Find new partner button -->
+              <button @click="findNewPartner" 
+                      class="bg-gradient-to-r from-indigo-500 to-purple-500 text-white px-6 py-3 rounded-full
+                            shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-105
+                            text-base flex items-center justify-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                Tìm người mới
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Normal message display when not showing centered cancel message -->
+        <div v-else>
         <!-- Date separators -->
         <div v-for="(dateGroup, date) in groupedMessages" :key="date" class="message-group mb-3 sm:mb-4">
-          <div class="date-separator flex items-center justify-center mb-2 sm:mb-3">
-            <div class="h-px bg-gray-200 dark:bg-gray-700 flex-grow"></div>
-            <div class="mx-2 sm:mx-4 text-2xs sm:text-xs text-gray-500 dark:text-gray-400 font-medium">{{ formatDate(date) }}</div>
-            <div class="h-px bg-gray-200 dark:bg-gray-700 flex-grow"></div>
-          </div>
+          <!-- Xóa bỏ phần hiển thị ngày tháng -->
           
           <transition-group name="fade" tag="div" class="space-y-1.5 sm:space-y-2">
             <div v-for="msg in dateGroup" :key="msg.id" class="mb-1.5 sm:mb-2">
-              <!-- System message -->
-              <div v-if="msg.sender === 'system'" class="flex justify-center mb-2 sm:mb-3 message-system">
-                <div class="bg-gray-200/80 dark:bg-gray-700/80 backdrop-blur-xs px-3 sm:px-5 py-1.5 sm:py-2 text-2xs sm:text-sm rounded-full text-gray-700 dark:text-gray-300 shadow-sm border border-gray-300/30 dark:border-gray-600/30 system-message">
+                <!-- Enhanced System message with animation and better styling -->
+                <div v-if="msg.sender === 'system'" class="flex justify-center mb-3 sm:mb-4 message-system">
+                  <!-- If message contains "hủy tìm kiếm" (canceled search), show enhanced version -->
+                  <div v-if="msg.content && msg.content.includes('hủy tìm kiếm')" 
+                       class="enhanced-system-message px-4 py-3 sm:px-5 sm:py-4 rounded-2xl max-w-md w-full animate-fade-in">
+                    <div class="flex flex-col items-center justify-center">
+                      <!-- Icon animation -->
+                      <div class="relative w-16 h-16 mb-3">
+                        <div class="absolute inset-0 bg-gradient-to-r from-indigo-300 to-purple-300 dark:from-indigo-600 dark:to-purple-600 rounded-full opacity-20 blur-md animate-pulse"></div>
+                        <div class="relative flex items-center justify-center w-full h-full">
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-indigo-500 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                          </svg>
+                        </div>
+                      </div>
+                      
+                      <!-- Message title -->
+                      <h4 class="text-base sm:text-lg font-semibold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 mb-2">
+                        Đã hủy tìm kiếm
+                      </h4>
+                      
+                      <!-- Message content -->
+                      <p class="text-sm sm:text-base text-gray-600 dark:text-gray-300 text-center mb-4">
+                        Bấm nút "Tìm người mới" khi bạn muốn tìm người trò chuyện.
+                      </p>
+                      
+                  
+                    </div>
+                  </div>
+                  <!-- Regular system message -->
+                  <div v-else class="bg-gray-200/80 dark:bg-gray-700/80 backdrop-blur-xs px-3 sm:px-5 py-1.5 sm:py-2 text-2xs sm:text-sm rounded-full text-gray-700 dark:text-gray-300 shadow-sm border border-gray-300/30 dark:border-gray-600/30 system-message">
                   {{ msg.content }}
                 </div>
               </div>
@@ -114,19 +212,38 @@
                   <div v-if="msg.content" class="whitespace-pre-line message-text text-xs sm:text-sm" v-html="formatMessageContent(msg.content)"></div>
                   
                   <!-- Image message -->
-                  <div v-if="msg.imageData" class="mb-1.5 sm:mb-2">
-                    <img 
-                      :src="msg.imageData" 
-                      class="max-w-full rounded-lg cursor-pointer hover:opacity-95 transition-opacity"
-                      alt="Shared image"
-                      @click="openImagePreview(msg.imageData, msg.selfDestruct, msg.selfDestructTime, msg.id)"
-                    />
-                    <p v-if="msg.content" class="mt-1.5 sm:mt-2 whitespace-pre-line text-xs sm:text-sm">{{ msg.content }}</p>
+                  <div v-if="msg.imageData" class="mb-3 media-container animate-media-appear">
+                    <div class="media-header text-xs font-medium text-blue-700 dark:text-blue-400 mb-2 flex items-center bg-white dark:bg-gray-800 p-2 rounded-lg shadow-sm">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd" />
+                      </svg>
+                      <span>Media được chia sẻ</span>
+                    </div>
+                    <div class="media-content bg-blue-50/50 dark:bg-blue-900/10 p-1.5 overflow-hidden rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 border border-blue-100 dark:border-blue-800/30">
+                      <div class="media-frame rounded-lg overflow-hidden relative group">
+                        <div class="absolute inset-0 bg-gradient-to-tr from-blue-100/20 to-blue-300/10 pointer-events-none"></div>
+                        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/5 dark:group-hover:bg-white/5 transition-all duration-300 z-10"></div>
+                        <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20">
+                          <div class="bg-black/60 dark:bg-white/20 rounded-full p-2 transform scale-90 group-hover:scale-100 transition-transform duration-300">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                            </svg>
+                          </div>
+                        </div>
+                        <img 
+                          :src="msg.imageData" 
+                          class="max-w-full rounded-lg cursor-pointer transition-all duration-300 hover:scale-[1.02]"
+                          alt="Shared image"
+                          loading="lazy"
+                          @click="openImagePreview(msg.imageData, msg.selfDestruct, msg.selfDestructTime, msg.id)"
+                        />
+                      </div>
+                    </div>
                     
                     <!-- Self-destruct indicator -->
                     <div v-if="msg.selfDestruct && !msg.viewStarted && msg.sender !== 'user'" 
-                      class="flex items-center mt-1 text-2xs sm:text-xs text-red-500">
-                      <svg xmlns="http://www.w3.org/2000/svg" class="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      class="flex items-center mt-2 text-xs text-rose-500 bg-rose-50 dark:bg-rose-900/20 px-2 py-1 rounded-full shadow-sm">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                       </svg>
                       <span>Hình ảnh sẽ tự hủy sau {{ msg.selfDestructTime }} giây</span>
@@ -134,8 +251,8 @@
                     
                     <!-- Self-destruct countdown -->
                     <div v-if="msg.viewStarted && !msg.isDestroyed" 
-                      class="flex items-center mt-1 text-2xs sm:text-xs text-red-500 animate-pulse">
-                      <svg xmlns="http://www.w3.org/2000/svg" class="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      class="flex items-center mt-2 text-xs text-rose-500 bg-rose-50 dark:bg-rose-900/20 px-2 py-1 rounded-full animate-pulse shadow-sm">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                       <span>Tự hủy sau {{ msg.countdown || msg.selfDestructTime }} giây</span>
@@ -143,8 +260,8 @@
                     
                     <!-- Destroyed indicator -->
                     <div v-if="msg.isDestroyed" 
-                      class="flex items-center mt-1 text-2xs sm:text-xs text-gray-500">
-                      <svg xmlns="http://www.w3.org/2000/svg" class="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      class="flex items-center mt-2 text-xs text-gray-500 bg-gray-50 dark:bg-gray-800/50 px-2 py-1 rounded-full shadow-sm">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                       </svg>
                       <span>Hình ảnh đã tự hủy</span>
@@ -152,28 +269,41 @@
                   </div>
                   
                   <!-- Video message -->
-                  <div v-if="msg.videoData" class="mb-1.5 sm:mb-2">
-                    <video 
-                      :key="msg.id + '_video'"
-                      :src="ensureVideoFormat(msg.videoData)" 
-                      class="max-w-full rounded-lg cursor-pointer hover:opacity-95 transition-opacity"
-                      controls
-                      preload="metadata"
-                      width="100%"
-                      style="max-height: 300px; background-color: rgba(0,0,0,0.05);"
-                      @click="playVideo"
-                      @loadeddata="videoLoaded"
-                      @error="videoError"
-                      crossorigin="anonymous"
-                      playsinline
-                      type="video/mp4"
-                    ></video>
-                    <p v-if="msg.content" class="mt-1.5 sm:mt-2 whitespace-pre-line text-xs sm:text-sm">{{ msg.content }}</p>
+                  <div v-if="msg.videoData" class="mb-3 media-container animate-media-appear">
+                    <div class="media-header text-xs font-medium text-blue-700 dark:text-blue-400 mb-2 flex items-center bg-white dark:bg-gray-800 p-2 rounded-lg shadow-sm">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
+                        <path d="M14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
+                      </svg>
+                      <span>Video được chia sẻ</span>
+                    </div>
+                    <div class="media-content bg-blue-50/50 dark:bg-blue-900/10 p-1.5 overflow-hidden rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 border border-blue-100 dark:border-blue-800/30">
+                      <div class="media-frame rounded-lg overflow-hidden relative group">
+                        <div class="absolute inset-0 bg-gradient-to-tr from-blue-100/20 to-blue-300/10 pointer-events-none z-10"></div>
+                        <div class="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                          <div class="bg-black/40 dark:bg-black/60 rounded-full p-3 opacity-80 group-hover:opacity-0 transition-opacity duration-300">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white" viewBox="0 0 20 20" fill="currentColor">
+                              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd" />
+                            </svg>
+                          </div>
+                        </div>
+                        <video 
+                          :src="msg.videoData" 
+                          class="max-w-full rounded-lg transition-all duration-300 hover:scale-[1.02]"
+                          controls
+                          preload="metadata"
+                          controlsList="nodownload"
+                          style="max-height: 350px;"
+                          @play="handleVideoPlay(msg.id, msg.selfDestruct, msg.selfDestructTime)"
+                          @click.stop="openVideoPreview(msg.videoData, msg.selfDestruct, msg.selfDestructTime, msg.id)"
+                        ></video>
+                      </div>
+                    </div>
                     
                     <!-- Self-destruct indicator -->
                     <div v-if="msg.selfDestruct && !msg.viewStarted && msg.sender !== 'user'" 
-                      class="flex items-center mt-1 text-2xs sm:text-xs text-red-500">
-                      <svg xmlns="http://www.w3.org/2000/svg" class="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      class="flex items-center mt-2 text-xs text-rose-500 bg-rose-50 dark:bg-rose-900/20 px-2 py-1 rounded-full shadow-sm">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                       </svg>
                       <span>Video sẽ tự hủy sau {{ msg.selfDestructTime }} giây</span>
@@ -181,8 +311,8 @@
                     
                     <!-- Self-destruct countdown -->
                     <div v-if="msg.viewStarted && !msg.isDestroyed" 
-                      class="flex items-center mt-1 text-2xs sm:text-xs text-red-500 animate-pulse">
-                      <svg xmlns="http://www.w3.org/2000/svg" class="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      class="flex items-center mt-2 text-xs text-rose-500 bg-rose-50 dark:bg-rose-900/20 px-2 py-1 rounded-full animate-pulse shadow-sm">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                       <span>Tự hủy sau {{ msg.countdown || msg.selfDestructTime }} giây</span>
@@ -190,107 +320,111 @@
                     
                     <!-- Destroyed indicator -->
                     <div v-if="msg.isDestroyed" 
-                      class="flex items-center mt-1 text-2xs sm:text-xs text-gray-500">
-                      <svg xmlns="http://www.w3.org/2000/svg" class="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      class="flex items-center mt-2 text-xs text-gray-500 bg-gray-50 dark:bg-gray-800/50 px-2 py-1 rounded-full shadow-sm">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                       </svg>
                       <span>Video đã tự hủy</span>
                     </div>
                   </div>
-                  
-                  <div class="message-meta flex items-center justify-end mt-0.5 sm:mt-1 space-x-1">
-                    <!-- Message time -->
-                    <span class="text-3xs sm:text-2xs opacity-70">{{ formatTime(msg.timestamp) }}</span>
-                    
-                    <!-- Read status (for user messages only) -->
-                    <span v-if="msg.sender === 'user'" class="ml-1">
-                      <svg v-if="msg.isRead" xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                      </svg>
-                      <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm-1.707-6.707a1 1 0 01-1.414-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 9.414V13a1 1 0 11-2 0V9.414l-1.293 1.293z" clip-rule="evenodd" />
-                      </svg>
-                    </span>
-                  </div>
                 </div>
-                
-                <!-- Message reactions -->
-                <div v-if="msg.reactions && msg.reactions.length > 0" 
-                  :class="{
-                    'message-reactions bg-white dark:bg-gray-800 shadow-sm rounded-full px-2 py-1 flex -mt-3': true,
-                    'ml-2': msg.sender !== 'user',
-                    'mr-2': msg.sender === 'user'
-                  }">
-                  <div v-for="(reaction, i) in msg.reactions" :key="i" class="mx-0.5">
-                    {{ reaction.emoji }}
-                  </div>
-                </div>
-              </div>
-              
-              <!-- Reaction options (show on hover/tap) -->
-              <div v-if="msg.sender !== 'user' && (msg.content || msg.imageData || msg.fileData || msg.voiceData || msg.videoData)" 
-                class="reactions-bar flex justify-start mt-1 ml-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button 
-                  v-for="emoji in quickReactions" 
-                  :key="emoji" 
-                  @click="addReaction(msg.id, emoji)"
-                  class="text-sm p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
-                >
-                  {{ emoji }}
-                </button>
               </div>
             </div>
           </transition-group>
         </div>
         
         <div ref="messageEnd"></div>
-        
-        <!-- Scroll to bottom button -->
-        <transition name="fade">
-          <button 
-            v-if="showScrollButton" 
-            @click="scrollToBottom"
-            class="fixed bottom-24 right-6 bg-secondary-500 text-white p-3 rounded-full shadow-lg hover:bg-secondary-600 transition-colors z-10"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-            </svg>
-          </button>
-        </transition>
       </div>
-      
+    </div>
+  
+                    
       <!-- Not connected placeholder -->
       <div v-else-if="!isConnected && !isConnecting" class="flex-1 flex flex-col items-center justify-center p-8">
-        <div class="w-64 h-64 mb-8 flex items-center justify-center">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-40 w-40 text-secondary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.134 9 8z" />
-          </svg>
-        </div>
-        <h3 class="text-xl font-semibold text-secondary-600 dark:text-secondary-400 mb-4">Chào mừng đến với Chat Anonymous!</h3>
-        <p class="text-gray-600 dark:text-gray-400 text-center mb-6 max-w-md">Trò chuyện ẩn danh và an toàn với người lạ. Bấm nút bên dưới để bắt đầu.</p>
-        <button @click="connectToChat" class="btn-gradient px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all">
+        <!-- Animated chat icon with pulsing gradient border -->
+        <div class="w-32 h-32 mb-8 relative transform transition-all duration-700 animate-pulse">
+          <!-- Gradient background circle with blur effect -->
+          <div class="absolute inset-0 bg-gradient-to-r from-secondary-400 to-primary-400 rounded-full opacity-30 blur-xl"></div>
+          
+          <!-- Chat bubble icon with gradient -->
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-full w-full text-secondary-500" viewBox="0 0 24 24" stroke="currentColor" fill="none">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" 
+                  class="animate-draw-path" 
+                  d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                      </svg>
+                </div>
+                
+        <!-- Welcome text with fade-in animation -->
+        <h3 class="text-xl font-semibold text-transparent bg-clip-text bg-gradient-to-r from-secondary-600 to-primary-600 mb-4 animate-fade-in">
+          Chào mừng đến với Chat Anonymous!
+        </h3>
+        
+        <!-- Description with delayed fade-in -->
+        <p class="text-gray-600 dark:text-gray-400 text-center mb-6 max-w-md animate-fade-in delay-100">
+          Trò chuyện ẩn danh và an toàn với người lạ. Bấm nút bên dưới để bắt đầu.
+        </p>
+        
+        <!-- Button with gradient and hover animation -->
+        <button @click="connectToChat" 
+                class="bg-gradient-to-r from-secondary-500 to-primary-500 text-white px-6 py-3 rounded-xl shadow-lg
+                       hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 animate-fade-in delay-200">
           <span class="flex items-center">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-              <path fill-rule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.395-3.72C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clip-rule="evenodd" />
+              <path fill-rule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clip-rule="evenodd" />
             </svg>
             Bắt đầu trò chuyện
           </span>
         </button>
       </div>
       
-      <!-- Searching placeholder -->
-      <div v-else-if="(isSearching || (isConnected && !isPaired)) && !isPaired" class="flex-1 flex flex-col items-center justify-center p-8">
-        <div class="searching-animation mb-8">
-          <div class="w-64 h-64 animate-pulse flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-40 w-40 text-secondary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+      <!-- Searching placeholder - Cải tiến với animation đẹp và màu đồng bộ -->
+      <div v-else-if="isSearching && !isPaired" 
+           class="flex-1 flex flex-col items-center justify-center p-8 bg-gradient-to-b from-white/80 to-secondary-50/30 dark:from-gray-900/80 dark:to-secondary-900/20 transition-all duration-700 animate-fade-in">
+        
+        <!-- Vòng tìm kiếm animation với hiệu ứng đẹp -->
+        <div class="searching-animation mb-10 relative">
+          <!-- Vòng tròn pulse ngoài cùng -->
+          <div class="absolute inset-0 -m-8 rounded-full bg-secondary-200/20 dark:bg-secondary-700/10 animate-pulse-slow"></div>
+          
+          <!-- Vòng tròn pulse thứ 2 -->
+          <div class="absolute inset-0 -m-4 rounded-full bg-secondary-200/30 dark:bg-secondary-700/20 animate-pulse"></div>
+          
+          <!-- Icon kính lúp với đường path animation -->
+          <div class="relative w-40 h-40 flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-32 w-32 text-secondary-400 dark:text-secondary-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" 
+                    class="animate-draw-path"
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
+            
+            <!-- Đốm sáng di chuyển dọc theo viền kính lúp -->
+            <div class="absolute inset-0 rounded-full flex items-center justify-center">
+              <div class="w-1.5 h-1.5 bg-secondary-500/80 rounded-full animate-orbit"></div>
           </div>
         </div>
-        <h3 class="text-xl font-semibold text-secondary-600 dark:text-secondary-400 mb-4">Đang tìm kiếm...</h3>
-        <p class="text-gray-600 dark:text-gray-400 text-center mb-6 max-w-md">Chúng tôi đang tìm kiếm người trò chuyện phù hợp cho bạn. Vui lòng đợi trong giây lát.</p>
-        <button @click="cancelSearch" class="border border-red-500 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 px-6 py-2 rounded-xl transition-colors">
+        </div>
+        
+        <!-- Tiêu đề và văn bản với hiệu ứng xuất hiện tuần tự -->
+        <h3 class="text-xl md:text-2xl font-semibold text-transparent bg-clip-text bg-gradient-to-r from-secondary-600 to-primary-600 mb-4 animate-fade-in delay-100">
+          Đang tìm kiếm...
+        </h3>
+        
+        <p class="text-gray-600 dark:text-gray-400 text-center mb-8 max-w-md animate-fade-in delay-200">
+          Chúng tôi đang tìm kiếm người trò chuyện phù hợp cho bạn.
+          <br>Vui lòng đợi trong giây lát.
+        </p>
+        
+        <!-- Nút hủy tìm kiếm với hiệu ứng hover -->
+        <button @click="cancelSearch" 
+                class="px-6 py-2.5 rounded-full border-2 border-secondary-400 text-secondary-500 
+                       hover:bg-secondary-100 dark:hover:bg-secondary-900/30 
+                       transition-all duration-300 transform hover:scale-105
+                       animate-fade-in delay-300 hover:shadow-lg">
+          <span class="flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
           Hủy tìm kiếm
+          </span>
         </button>
       </div>
 
@@ -516,21 +650,38 @@
           </div>
         </div>
         
-        <div v-else-if="isConnected && !isPaired" class="p-4 text-center">
-          <div v-if="isSearching" class="animate-pulse text-gray-600 dark:text-gray-400 mb-2">
-            <span class="text-sm">Đang tìm kiếm người trò chuyện...</span>
-          </div>
-          <div v-else class="text-gray-600 dark:text-gray-400 mb-2">
-            <button 
-              @click="findNewPartner" 
-              class="px-4 py-2 rounded-md bg-gradient-to-r from-secondary-500 to-primary-500 text-white hover:from-secondary-600 hover:to-primary-600 transition duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-            >
-              Tìm người mới
-            </button>
-          </div>
-        </div>
+      
       </div>
     </div>
+    
+    <!-- Image/Video Lightbox -->
+    <transition name="fade">
+      <div v-if="showMediaPreview" class="media-lightbox" @click.self="closeMediaPreview">
+        <div class="media-lightbox-content" :class="{'active': showMediaPreview}">
+          <img v-if="previewType === 'image'" :src="previewMedia" class="max-w-full rounded-lg" />
+          <video 
+            v-if="previewType === 'video'" 
+            :src="previewMedia" 
+            class="max-w-full rounded-lg" 
+            controls 
+            autoplay
+            controlsList="nodownload"
+            @play="handleVideoPlay(previewMessageId, previewSelfDestruct, previewCountdown)"
+          ></video>
+        </div>
+        <div class="media-lightbox-close" @click="closeMediaPreview">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </div>
+        <div v-if="previewSelfDestruct && previewCountdown > 0" class="media-lightbox-countdown media-countdown-pulse">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span>Tự hủy sau {{ previewCountdown }} giây</span>
+        </div>
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -615,7 +766,14 @@ export default {
       previewImage: null,
       // Add emojis property
       emojis: ['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '☺️', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳', '😏', '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣', '😖', '😫', '😩', '🥺', '😢', '😭', '😮', '😱', '😨', '😰', '😯', '😦', '😧', '😲', '😵', '😳', '🤯', '👍', '👎', '👏', '🙌', '👐', '🤝', '👊', '✊', '🤛', '🤜', '✌️', '👌', '🤙', '👈', '👉', '👉', '👆', '👇', '☝️', '✋', '🤚', '🖐️', '🖖', '👋', '🤗', '🤔', '🤭', '🤫', '🤥', '🔥', '💯', '💥', '⭐', '🌟', '✨', '💫', '🎉', '🎊', '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎'],
-      filteredEmojis: []
+      filteredEmojis: [],
+      showMediaPreview: false,
+      previewMedia: null,
+      previewType: 'image', // 'image' or 'video'
+      previewSelfDestruct: false,
+      previewCountdown: 0,
+      previewMessageId: null,
+      previewInterval: null,
     }
   },
   computed: {
@@ -672,45 +830,88 @@ export default {
   },
   methods: {
     connectToChat() {
-      // Keep the existing method but don't set isConnecting here
-      // since we already set it in startChatAnimation
+      // Đặt isConnecting thành true nhưng chưa thay đổi UI ngay lập tức
       if (!this.isConnecting) {
         this.isConnecting = true;
+        
+        // Thêm isSearching=true ngay từ đầu để trạng thái tìm kiếm được hiển thị sớm
+        // và tránh flash giữa các trạng thái
+        this.isSearching = true;
       }
       this.initWebSocket();
     },
     
     fetchStats() {
-      // Determine the appropriate API URL based on environment
-      let apiUrl;
+      // Lấy dữ liệu thống kê từ API backend
+      const statsUrl = process.env.NODE_ENV === 'development' 
+        ? 'http://localhost:8080/api/stats' 
+        : '/api/stats';
       
-      if (process.env.NODE_ENV === 'development') {
-        apiUrl = 'http://localhost:8080/api/stats';
-      } else {
-        apiUrl = '/api/stats';
-      }
-      
-      fetch(apiUrl)
+      fetch(statsUrl, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate'
+        },
+        credentials: 'same-origin'
+      })
         .then(response => {
           if (!response.ok) {
-            throw new Error('Network response was not ok');
+            throw new Error(`Network response error: ${response.status}`);
           }
           return response.json();
         })
         .then(data => {
-          // Update the stats variables
-          this.onlineCount = data.onlineCount || 0;
-          this.waitingUsers = data.waitingUsers || 0;
-          this.chattingCount = data.chattingCount || 0;
-          
-          console.log('Stats updated:', {
-            online: this.onlineCount,
-            waiting: this.waitingUsers,
-            chatting: this.chattingCount
-          });
+          if (data && typeof data === 'object') {
+            // Kiểm tra và xử lý dữ liệu từ backend
+            console.log('Raw stats data received:', data);
+            
+            // Chi tiết từng giá trị cho debug
+            console.log('onlineCount from server:', data.onlineCount);
+            console.log('waitingUsers from server:', data.waitingUsers);
+            console.log('activePairs from server:', data.activePairs);
+            console.log('Calculated total:', (data.waitingUsers + (data.activePairs * 2)));
+            
+            // Cập nhật biến thống kê với dữ liệu thực từ server
+            // Chỉ cập nhật khi giá trị hợp lệ
+            if (Number.isInteger(data.onlineCount)) {
+              this.onlineCount = data.onlineCount;
+              console.log('Updated onlineCount to:', this.onlineCount);
+            }
+            
+            if (Number.isInteger(data.waitingUsers)) {
+              this.waitingUsers = data.waitingUsers;
+            }
+            
+            if (Number.isInteger(data.chattingCount)) {
+              this.chattingCount = data.chattingCount;
+            }
+            
+            // Tính toán lại nếu không có dữ liệu onlineCount từ server
+            if (!data.onlineCount && (data.waitingUsers || data.activePairs)) {
+              this.onlineCount = (data.waitingUsers || 0) + ((data.activePairs || 0) * 2);
+            }
+            
+            // Đảm bảo onlineCount luôn ít nhất là 1 để animation vẫn hoạt động
+            if (!this.onlineCount) {
+              this.onlineCount = 1;
+            }
+            
+            console.log('Stats updated:', {
+              online: this.onlineCount,
+              waiting: this.waitingUsers,
+              chatting: this.chattingCount
+            });
+          } else {
+            console.error('Invalid data format received:', data);
+          }
         })
         .catch(error => {
           console.error('Error fetching stats:', error);
+          
+          // Trong trường hợp lỗi, giữ nguyên giá trị cũ hoặc sử dụng giá trị mặc định
+          // để đảm bảo giao diện không bị trống
+          if (!this.onlineCount) this.onlineCount = 1;
         });
     },
     
@@ -739,9 +940,25 @@ export default {
         
         this.socket.onopen = () => {
           this.isConnected = true;
-          this.isConnecting = false;
+          
+          // KHÔNG đặt isConnecting=false ngay lập tức để tránh flash UI
+          // this.isConnecting = false;
           this.reconnectAttempts = 0;
           console.log('WebSocket connection established');
+          
+          // Cập nhật số người online khi kết nối thành công
+          // Nếu onlineCount = 0, đặt nó thành ít nhất là 1
+          if (this.onlineCount === 0) {
+            this.onlineCount = 1;
+          } else {
+            // Tăng số người online lên 1 khi có kết nối mới
+            this.onlineCount += 1;
+          }
+          console.log('Updated online count after connection:', this.onlineCount);
+          
+          // Thay vì dừng ở trạng thái "đã kết nối", ngay lập tức gửi lệnh tìm kiếm
+          // người trò chuyện để tránh flash giao diện
+          this.sendFindRequest();
           
           // Remove the loading center class when connection is established
           const buttonContainer = document.querySelector('.p-4.text-center');
@@ -764,6 +981,12 @@ export default {
           this.isConnected = false;
           this.isPaired = false;
           console.log('WebSocket connection closed', event);
+          
+          // Giảm số người online khi kết nối đóng
+          if (this.onlineCount > 1) {
+            this.onlineCount -= 1;
+            console.log('Decreased online count after disconnect:', this.onlineCount);
+          }
           
           // Attempt to reconnect if not intentionally closed
           if (!event.wasClean && this.reconnectAttempts < this.maxReconnectAttempts) {
@@ -816,6 +1039,27 @@ export default {
         }
       }
       
+      // Xử lý thông điệp stats_update để cập nhật thống kê trực tiếp từ server
+      if (message.type === 'stats_update' && message.statsData) {
+        console.log('Received stats update from server:', message.statsData);
+        // Cập nhật thông tin từ server
+        if (message.statsData.onlineCount) {
+          this.onlineCount = message.statsData.onlineCount;
+        }
+        if (message.statsData.waitingUsers) {
+          this.waitingUsers = message.statsData.waitingUsers;
+        }
+        if (message.statsData.activePairs) {
+          this.chattingCount = message.statsData.activePairs * 2;
+        }
+        console.log('Stats updated from server message:', {
+          online: this.onlineCount,
+          waiting: this.waitingUsers,
+          chatting: this.chattingCount
+        });
+        return; // Không hiển thị thông báo stats_update trong khung chat
+      }
+      
       switch (message.type) {
         case 'session':
           this.sessionId = message.sessionId;
@@ -850,6 +1094,23 @@ export default {
           break;
           
         case 'status':
+          // Cải thiện xử lý các thông điệp trạng thái để tránh flash UI
+          if (message.content.includes('Session established')) {
+            // Bỏ qua thông báo thiết lập phiên để không làm gián đoạn trạng thái tìm kiếm
+            console.log('Session established, maintaining search UI');
+            return;
+          } else if (message.content.includes('Đang chờ kết nối')) {
+            // Đang ở trạng thái chờ ghép cặp, giữ nguyên trạng thái tìm kiếm
+            console.log('Waiting for pairing, maintaining search UI');
+            this.isSearching = true;
+            return;
+          } else if (message.content.includes('Đang tìm kiếm')) {
+            // Đang tìm kiếm, không cần thay đổi UI vì đã ở trạng thái này
+            console.log('Searching for partner, already in search UI');
+            this.isSearching = true;
+            return;
+          }
+          
           // Check for error messages from the server
           if (message.content && message.content.includes('không được hỗ trợ')) {
             // Log the error but don't show it to the user
@@ -1365,14 +1626,12 @@ export default {
     },
     
     findNewPartner() {
-      // Reset the cancel flag when intentionally searching
-      this.cancelAutoSearch = false;
-      
       // Clear all messages first
       this.messages = [];
       
       // Set searching state
       this.isSearching = true;
+      this.cancelAutoSearch = false; // Reset the cancel flag when intentionally searching
       
       // Add system message about searching
       this.messages.push({
@@ -1383,13 +1642,9 @@ export default {
         isSystemMessage: true
       });
       
-      // Then proceed with finding a new partner
+      // Sử dụng hàm mới để gửi yêu cầu tìm kiếm
       if (this.socket && this.socket.readyState === WebSocket.OPEN) {
-        this.socket.send(JSON.stringify({ 
-          type: 'find',
-          content: '',
-          sender: 'user'
-        }));
+        this.sendFindRequest();
       } else {
         this.connectToChat();
       }
@@ -1548,13 +1803,13 @@ export default {
         const targetMsg = this.messages.find(msg => msg.id === messageId);
         if (targetMsg) {
           const exists = targetMsg.reactions.some(r => 
-            r.emoji === emoji && r.sender === 'user'
+            r.emoji === emoji && r.sender === message.sender
           );
           
           if (!exists) {
             targetMsg.reactions.push({
               emoji: emoji,
-              sender: 'user'
+              sender: message.sender
             });
           }
         }
@@ -1710,66 +1965,72 @@ export default {
       this.fileData = null;
     },
     
-    openImagePreview(imageUrl, selfDestruct, selfDestructTime, messageId) {
-      this.previewImage = imageUrl;
-      this.currentPreviewMessageId = messageId;
-      this.isDestroyed = false;
-      this.isSelfDestruct = selfDestruct;
-      this.selfDestructTime = selfDestructTime;
+    openImagePreview(imageData, selfDestruct, selfDestructTime, messageId) {
+      this.previewMedia = imageData;
+      this.previewType = 'image';
+      this.previewSelfDestruct = selfDestruct;
+      this.previewMessageId = messageId;
+      this.showMediaPreview = true;
       
-      // Get the current message
-      const message = this.messages.find(m => m.id === messageId);
-      if (!message) return;
-      
-      // Use the current countdown if already started, otherwise use initial time
-      this.countdown = message.countdown || selfDestructTime;
-      
-      // If the image hasn't been destroyed yet, just sync with the existing countdown
-      // We don't need to start a new countdown since it should already be running
-      if (selfDestruct && !message.isDestroyed) {
-        // The countdown should already be running automatically
-        // Just make sure we're displaying the correct countdown
-        if (!message.viewStarted) {
+      // If it's a self-destructing image, start the countdown
+      if (selfDestruct) {
+        const message = this.messages.find(m => m.id === messageId);
+        
+        // If this is the first time viewing the image, start the countdown
+        if (message && !message.viewStarted) {
           message.viewStarted = true;
+          message.countdown = selfDestructTime;
+          this.startCountdownForMessage(messageId, selfDestructTime);
+        }
+        
+        // Set the countdown in the preview
+        this.previewCountdown = message?.countdown || selfDestructTime;
+        
+        // Update the countdown in the preview
+        clearInterval(this.previewInterval);
+        this.previewInterval = setInterval(() => {
+          this.previewCountdown--;
           
-          // If the countdown wasn't started yet, start it
-          if (message.sender !== 'user') {
-            this.sendImageViewedNotification(messageId);
+          if (this.previewCountdown <= 0) {
+            this.closeMediaPreview();
+            clearInterval(this.previewInterval);
           }
+        }, 1000);
+      }
+    },
+    
+    openVideoPreview(videoData, selfDestruct, selfDestructTime, messageId) {
+      this.previewMedia = videoData;
+      this.previewType = 'video';
+      this.previewSelfDestruct = selfDestruct;
+      this.previewMessageId = messageId;
+      this.showMediaPreview = true;
+      
+      // For self-destructing videos, the countdown starts on play (handled by handleVideoPlay)
+      if (selfDestruct) {
+        const message = this.messages.find(m => m.id === messageId);
+        
+        // If countdown is already running, show it in preview
+        if (message && message.viewStarted) {
+          this.previewCountdown = message.countdown;
+          
+          clearInterval(this.previewInterval);
+          this.previewInterval = setInterval(() => {
+            this.previewCountdown = message.countdown;
+            
+            if (this.previewCountdown <= 0) {
+              this.closeMediaPreview();
+              clearInterval(this.previewInterval);
+            }
+          }, 1000);
         }
       }
     },
     
-    closeImagePreview() {
-      // Nếu hình ảnh đang hiển thị và tự hủy, cập nhật thông báo đã hủy
-      if (this.previewImage && this.isSelfDestruct) {
-        // Dừng bộ đếm ngược
-        clearInterval(this.countdownInterval);
-        
-        // Cập nhật trạng thái tin nhắn
-        const messageId = this.currentPreviewMessageId;
-        if (messageId) {
-          const message = this.messages.find(m => m.id === messageId);
-          if (message) {
-            if (this.isDestroyed) {
-              message.isDestroyed = true;
-              message.imageData = null; // Xóa hình ảnh khỏi bộ nhớ
-              
-              // Gửi thông báo tự hủy đến người gửi
-              if (message.sender !== 'user') {
-                this.sendImageDestroyedNotification(messageId);
-              }
-            }
-          }
-        }
-      }
-      
-      this.previewImage = null;
-      this.currentPreviewMessageId = null;
-      this.isSelfDestruct = false;
-      this.isDestroyed = false;
-      this.countdown = 0;
-      clearInterval(this.countdownInterval);
+    closeMediaPreview() {
+      this.showMediaPreview = false;
+      this.previewMedia = null;
+      clearInterval(this.previewInterval);
     },
     
     formatMessageContent(content) {
@@ -2561,7 +2822,47 @@ export default {
         return 'data:video/mp4;base64,' + videoData.replace(/^data:.*?;base64,/, '');
       }
       return videoData;
-    }
+    },
+    // Hàm mới để tách biệt việc gửi yêu cầu tìm kiếm và thiết lập trạng thái UI
+    sendFindRequest() {
+      // Gửi yêu cầu tìm kiếm ngay khi kết nối đã thiết lập
+      if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+        console.log('Sending find request immediately after connection');
+        
+        // Đảm bảo đang ở trạng thái tìm kiếm
+        this.isSearching = true;
+        this.isConnecting = false; // Bây giờ mới tắt trạng thái đang kết nối
+        
+        // Gửi yêu cầu tìm kiếm đến server
+        this.socket.send(JSON.stringify({
+          type: 'find',
+          content: '',
+          sender: 'user'
+        }));
+        
+        // Thêm tin nhắn hệ thống nếu cần
+        if (this.messages.length === 0) {
+          this.messages.push({
+            id: 'system-' + Date.now(),
+            sender: 'system',
+            content: 'Đang tìm kiếm người trò chuyện mới...',
+            timestamp: Date.now(),
+            isSystemMessage: true
+          });
+        }
+      } else {
+        console.warn('Socket not ready, cannot send find request');
+      }
+    },
+    handleVideoPlay(messageId, selfDestruct, selfDestructTime) {
+      // If this is a self-destructing video and hasn't started the countdown yet
+      const message = this.messages.find(m => m.id === messageId);
+      if (message && selfDestruct && !message.viewStarted) {
+        message.viewStarted = true;
+        message.countdown = selfDestructTime;
+        this.startCountdownForMessage(messageId, selfDestructTime);
+      }
+    },
   },
   
   mounted() {
@@ -2574,6 +2875,9 @@ export default {
     
     // Initialize emojis
     this.filteredEmojis = [...this.emojis];
+    
+    // Đảm bảo onlineCount luôn ít nhất là 1
+    this.onlineCount = Math.max(1, this.onlineCount);
     
     // Check for existing connection in localStorage
     const savedSessionId = localStorage.getItem('chat_session_id');
@@ -2656,6 +2960,72 @@ export default {
   flex-direction: column;
   overflow: hidden;
   background: transparent;
+}
+
+/* Path drawing animation for the chat bubble */
+@keyframes drawPath {
+  0% {
+    stroke-dasharray: 100;
+    stroke-dashoffset: 100;
+    opacity: 0.7;
+  }
+  70% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+}
+
+.animate-draw-path {
+  stroke-dasharray: 100;
+  stroke-dashoffset: 0;
+  animation: drawPath 2s ease-in-out infinite alternate;
+}
+
+/* Orbit animation for moving dot */
+@keyframes orbit {
+  0% {
+    transform: rotate(0deg) translateX(34px) rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg) translateX(34px) rotate(-360deg);
+  }
+}
+
+.animate-orbit {
+  animation: orbit 3s linear infinite;
+}
+
+/* Pulse slow animation */
+@keyframes pulseSlow {
+  0%, 100% {
+    opacity: 0.1;
+    transform: scale(0.97);
+  }
+  50% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+}
+
+.animate-pulse-slow {
+  animation: pulseSlow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Add delay classes for staggered animations */
+.delay-100 {
+  animation-delay: 100ms;
+}
+
+.delay-200 {
+  animation-delay: 200ms;
+}
+
+.delay-300 {
+  animation-delay: 300ms;
 }
 
 /* Dark mode specific fixes */
@@ -2807,5 +3177,146 @@ export default {
 
 .dark .loading-overlay {
   background-color: rgba(0, 0, 0, 0.7);
+}
+
+/* Enhanced system message styles */
+.enhanced-system-message {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(249, 250, 251, 0.9));
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  transition: all 0.3s ease;
+}
+
+.dark .enhanced-system-message {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.9));
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(51, 65, 85, 0.5);
+}
+
+@keyframes draw-path {
+  0% {
+    stroke-dasharray: 100;
+    stroke-dashoffset: 100;
+    opacity: 0.5;
+  }
+  60% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.5s ease forwards;
+}
+
+.delay-100 {
+  animation-delay: 100ms;
+}
+
+.delay-200 {
+  animation-delay: 200ms;
+}
+
+.delay-300 {
+  animation-delay: 300ms;
+}
+
+/* Thêm CSS animation cho các hạt bay vòng quanh ở cuối component */
+@keyframes flyAround {
+  0% {
+    transform: translate(0, 0) scale(0.8);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.9;
+    box-shadow: 0 0 8px rgba(147, 51, 234, 0.5);
+  }
+  40% {
+    transform: translate(-20px, -15px) scale(1.1) rotate(180deg);
+    opacity: 0.7;
+  }
+  70% {
+    transform: translate(15px, 10px) scale(0.9) rotate(360deg);
+    opacity: 0.8;
+    box-shadow: 0 0 4px rgba(147, 51, 234, 0.3);
+  }
+  100% {
+    transform: translate(0, 0) scale(0.8) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+@keyframes sparkle {
+  0% {
+    transform: scale(0) rotate(0deg);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.5) rotate(180deg);
+    opacity: 0.8;
+    box-shadow: 0 0 10px rgba(252, 211, 77, 0.8);
+  }
+  100% {
+    transform: scale(0) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+.user-flying-avatar {
+  animation-duration: 6s;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  animation-iteration-count: infinite;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  box-shadow: 0 0 5px rgba(147, 51, 234, 0.3);
+}
+
+.user-particle-1 {
+  animation-name: flyAround;
+  animation-duration: 5s;
+}
+
+.user-particle-2 {
+  animation-name: flyAround;
+  animation-duration: 6s;
+  animation-direction: reverse;
+}
+
+.user-particle-3 {
+  animation-name: flyAround;
+  animation-duration: 4.5s;
+}
+
+.user-particle-4 {
+  animation-name: flyAround;
+  animation-duration: 7s;
+  animation-direction: reverse;
+}
+
+.user-particle-5 {
+  animation-name: flyAround;
+  animation-duration: 5.5s;
+}
+
+.sparkle-effect {
+  animation: sparkle 3s infinite ease-in-out;
+  box-shadow: 0 0 5px rgba(252, 211, 77, 0.5);
 }
 </style> 

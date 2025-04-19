@@ -4,21 +4,25 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
+import thanhpro0703.ChatAnonymousApp.service.ChatStatsService;
 import thanhpro0703.ChatAnonymousApp.service.RoomManager;
 
 @Controller
 public class HomeController {
     
     private final RoomManager roomManager;
+    private final ChatStatsService chatStatsService;
     
-    public HomeController(RoomManager roomManager) {
+    public HomeController(RoomManager roomManager, ChatStatsService chatStatsService) {
         this.roomManager = roomManager;
+        this.chatStatsService = chatStatsService;
     }
 
     @GetMapping("/")
     public String index(Model model) {
         model.addAttribute("currentPage", "home");
-        model.addAttribute("onlineCount", roomManager.getWaitingCount() + (roomManager.getPairedCount() * 2));
+        int onlineCount = Math.max(1, chatStatsService.getActiveConnectionsCount());
+        model.addAttribute("onlineCount", onlineCount);
         return "home";
     }
     

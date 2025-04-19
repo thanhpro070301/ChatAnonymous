@@ -15,6 +15,7 @@ import thanhpro0703.ChatAnonymousApp.service.RoomManager;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Component
 @Slf4j
@@ -24,11 +25,11 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     private final ChatStatsService chatStatsService;
     private final Map<String, UserSession> sessions = new ConcurrentHashMap<>();
     private final ObjectMapper objectMapper;
+    private final AtomicInteger activeConnections = new AtomicInteger(0);
 
     public ChatWebSocketHandler(RoomManager roomManager, ChatStatsService chatStatsService) {
         this.roomManager = roomManager;
         this.chatStatsService = chatStatsService;
-        // Cấu hình objectMapper để bỏ qua các trường không xác định
         this.objectMapper = new ObjectMapper();
         this.objectMapper.configure(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     }
@@ -38,70 +39,106 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         String sessionId = session.getId();
         log.info("New connection established: {}", sessionId);
         
+        int currentActive = activeConnections.incrementAndGet();
+        log.info("Active connections: {}", currentActive);
+        
         try {
             UserSession user = new UserSession(sessionId, session);
             
-            // Kiểm tra xem có phải là phiên đang kết nối lại không
             String partnerId = roomManager.getPartnerId(sessionId);
             
             if (partnerId != null && sessions.containsKey(partnerId)) {
-                // Phiên đang kết nối lại, cập nhật WebSocketSession mới
                 log.info("Session reconnecting: {} (paired with {})", sessionId, partnerId);
                 sessions.put(sessionId, user);
                 
-                // Ghi nhận kết nối lại trong thống kê
                 chatStatsService.recordReconnection();
                 
-                // Thông báo kết nối lại thành công
                 sendMessage(session, new Message("connected", "Đã kết nối với người lạ", "system", null));
                 
-                // Thông báo cho đối tác
                 WebSocketSession partnerSession = sessions.get(partnerId).getSocket();
                 if (partnerSession != null && partnerSession.isOpen()) {
                     sendMessage(partnerSession, new Message("status", "Người lạ đã kết nối lại", "system", null));
                 }
             } else {
-                // Đây là một phiên mới
                 sessions.put(sessionId, user);
                 
-                // Ghi nhận kết nối mới trong thống kê
                 chatStatsService.recordNewConnection();
                 
-                // Add user to waiting queue and try to pair
                 roomManager.addToQueue(user);
             }
+            
+            chatStatsService.updateActiveConnections(currentActive);
+            
+            broadcastStats();
+            
         } catch (Exception e) {
-            log.error("Error in connection establishment: {}", e.getMessage(), e);
-            try {
-                session.close(CloseStatus.SERVER_ERROR);
-            } catch (IOException closeEx) {
-                log.error("Error closing session: {}", closeEx.getMessage());
-            }
+            log.error("Error during connection establishment", e);
+            activeConnections.decrementAndGet();
+            throw e;
         }
+    }
+
+    public int getActiveConnectionsCount() {
+        return activeConnections.get();
+    }
+
+    @Override
+    public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
+        String sessionId = session.getId();
+        log.info("Connection closed: {} - {}", sessionId, status);
+        
+        int currentActive = activeConnections.updateAndGet(current -> Math.max(1, current - 1));
+        log.info("Active connections after close: {}", currentActive);
+        
+        UserSession user = sessions.remove(sessionId);
+        
+        if (user != null) {
+            roomManager.removeFromQueue(user);
+            
+            String partnerId = roomManager.getPartnerId(sessionId);
+            
+            if (partnerId != null) {
+                UserSession partner = sessions.get(partnerId);
+                if (partner != null && partner.getSocket().isOpen()) {
+                    try {
+                        Message disconnectMessage = new Message("status", "Người lạ đã ngắt kết nối", "system", null);
+                        String messageJson = objectMapper.writeValueAsString(disconnectMessage);
+                        partner.getSocket().sendMessage(new TextMessage(messageJson));
+                    } catch (IOException e) {
+                        log.error("Error sending disconnect notification", e);
+                    }
+                }
+            }
+            
+            roomManager.removePair(sessionId);
+        }
+        
+        chatStatsService.updateActiveConnections(currentActive);
+        
+        broadcastStats();
+        
+        super.afterConnectionClosed(session, status);
     }
 
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage textMessage) throws Exception {
         String sessionId = session.getId();
         
-        // Cập nhật thời gian hoạt động cuối cùng
         if (sessions.containsKey(sessionId)) {
             sessions.get(sessionId).updateActivity();
         }
         
         try {
-            // Kiểm tra kích thước message
             String payload = textMessage.getPayload();
             int payloadSize = payload.length();
             log.info("Message received from session {}, size: {} bytes", sessionId, payloadSize);
             
-            if (payloadSize > 50000000) { // Tăng giới hạn lên 50MB để hỗ trợ video
+            if (payloadSize > 50000000) {
                 log.warn("Message too large from session {}, size: {} bytes", sessionId, payloadSize);
                 sendMessage(session, new Message("status", "Không thể xử lý tin nhắn vì kích thước quá lớn (tối đa 50MB)", "system", null));
                 return;
             }
             
-            // Kiểm tra JSON hợp lệ
             Message message;
             try {
                 message = objectMapper.readValue(payload, Message.class);
@@ -111,18 +148,13 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                 return;
             }
             
-            // Kiểm tra xem tin nhắn có chứa dữ liệu hình ảnh không
             boolean hasImage = message.getImageData() != null && !message.getImageData().isEmpty();
-            
-            // Kiểm tra xem tin nhắn có chứa dữ liệu video không
             boolean hasVideo = message.getVideoData() != null && !message.getVideoData().isEmpty();
             
-            // Ghi log cho tin nhắn có nội dung đa phương tiện
             if (hasImage || hasVideo) {
                 if (hasImage) {
                     int imageSize = message.getImageData().length();
-                    // Kiểm tra kích thước dữ liệu hình ảnh
-                    if (imageSize > 500000) { // Giảm giới hạn xuống ~500KB
+                    if (imageSize > 500000) {
                         log.warn("Image data too large from session {}: {} bytes", sessionId, imageSize);
                         sendMessage(session, new Message("status", "Hình ảnh quá lớn, không thể gửi (tối đa 500KB)", "system", null));
                         return;
@@ -134,8 +166,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                 
                 if (hasVideo) {
                     int videoSize = message.getVideoData().length();
-                    // Kiểm tra kích thước dữ liệu video
-                    if (videoSize > 50000000) { // ~50MB limit
+                    if (videoSize > 50000000) {
                         log.warn("Video data too large from session {}: {} bytes", sessionId, videoSize);
                         sendMessage(session, new Message("status", "Video quá lớn, không thể gửi (tối đa 50MB)", "system", null));
                         return;
@@ -155,7 +186,6 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                 switch (message.getType()) {
                     case "message":
                     case "image":
-                        // Ghi nhận thống kê tin nhắn
                         chatStatsService.recordNewMessage();
                         
                         if (partnerId != null && sessions.containsKey(partnerId)) {
@@ -163,7 +193,6 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                             
                             if (partnerSession != null && partnerSession.isOpen()) {
                                 try {
-                                    // Đảm bảo giữ nguyên thông tin về hình ảnh khi gửi đến người nhận
                                     Message outMessage = new Message(
                                         hasImage || hasVideo ? "message" : message.getType(), 
                                         message.getContent(), 
@@ -171,12 +200,10 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                                         message.getImageData()
                                     );
                                     
-                                    // Thêm dữ liệu video nếu có
                                     if (hasVideo) {
                                         outMessage.setVideoData(message.getVideoData());
                                     }
                                     
-                                    // Thêm các trường mới nếu có
                                     if (message.getSenderId() != null) {
                                         outMessage.setSenderId(message.getSenderId());
                                     }
@@ -184,7 +211,6 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                                         outMessage.setReceiver(message.getReceiver());
                                     }
                                     
-                                    // Thêm thông tin tự hủy nếu có
                                     if (message.getSelfDestruct() != null) {
                                         outMessage.setSelfDestruct(message.getSelfDestruct());
                                         log.info("Setting selfDestruct: {} for outgoing message", message.getSelfDestruct());
@@ -194,12 +220,10 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                                         log.info("Setting selfDestructTime: {} for outgoing message", message.getSelfDestructTime());
                                     }
                                     
-                                    // Log the full outgoing message for debugging
                                     log.info("Outgoing message to partner {}: type={}, hasImage={}, hasVideo={}, selfDestruct={}, selfDestructTime={}", 
                                             partnerId, outMessage.getType(), (outMessage.getImageData() != null), 
                                             (outMessage.getVideoData() != null), outMessage.getSelfDestruct(), outMessage.getSelfDestructTime());
                                     
-                                    // Gửi tin nhắn và kiểm tra kết quả
                                     boolean sent = sendMessage(partnerSession, outMessage);
                                     if (!sent) {
                                         log.warn("Failed to send message to partner {}", partnerId);
@@ -210,12 +234,10 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                                     sendMessage(session, new Message("status", "Không thể gửi tin nhắn tới người nhận: " + e.getMessage(), "system", null));
                                 }
                             } else {
-                                // Đối tác không trực tuyến hoặc socket đã đóng
                                 log.warn("Partner session {} is not available or closed", partnerId);
                                 sendMessage(session, new Message("status", "Đối tượng chat có thể đã offline, tin nhắn có thể không được nhận", "system", null));
                             }
                         } else {
-                            // Không có đối tác, thêm vào hàng đợi
                             if (sessions.containsKey(sessionId)) {
                                 roomManager.addToQueue(sessions.get(sessionId));
                             }
@@ -227,33 +249,25 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                         break;
                     case "find":
                         log.info("Session {} requested to find new partner", sessionId);
-                        // User wants to find a new partner
                         if (partnerId != null) {
-                            // Notify current partner that stranger left
                             notifyPartnerLeft(partnerId);
-                            // Remove current pairing
                             roomManager.removePair(sessionId);
                         }
                         
-                        // Add back to queue
                         if (sessions.containsKey(sessionId)) {
                             roomManager.addToQueue(sessions.get(sessionId));
                         }
                         break;
                     case "connection_status":
                         log.debug("Session {} requested connection status", sessionId);
-                        // Yêu cầu kiểm tra trạng thái kết nối
                         if (partnerId != null && sessions.containsKey(partnerId)) {
                             WebSocketSession partnerSession = sessions.get(partnerId).getSocket();
                             if (partnerSession != null && partnerSession.isOpen()) {
-                                // Đối tác đang trực tuyến, gửi lại thông báo connected
                                 sendMessage(session, new Message("connected", "Đã kết nối với người lạ", "system", null));
                             } else {
-                                // Đối tác không trực tuyến
                                 sendMessage(session, new Message("status", "Đối tượng chat đang offline", "system", null));
                             }
                         } else {
-                            // Không có đối tác, thêm vào hàng đợi
                             if (sessions.containsKey(sessionId)) {
                                 roomManager.addToQueue(sessions.get(sessionId));
                             }
@@ -262,7 +276,6 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                     case "read_receipt":
                     case "typing":
                     case "reaction":
-                        // Xử lý các loại tin nhắn mới
                         if (partnerId != null && sessions.containsKey(partnerId)) {
                             WebSocketSession partnerSession = sessions.get(partnerId).getSocket();
                             if (partnerSession != null && partnerSession.isOpen()) {
@@ -281,19 +294,11 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         } catch (Exception e) {
             log.error("Error processing message from session {}: {}", sessionId, e.getMessage(), e);
             try {
-                // Thông báo lỗi nhưng không làm mất kết nối
                 sendMessage(session, new Message("status", "Đã xảy ra lỗi khi xử lý tin nhắn: " + e.getMessage(), "system", null));
             } catch (Exception ex) {
                 log.error("Could not send error message to session {}: {}", sessionId, ex.getMessage());
             }
         }
-    }
-
-    @Override
-    public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
-        String sessionId = session.getId();
-        log.info("Connection closed: {}, status: {}", sessionId, status);
-        disconnect(sessionId, false);
     }
 
     private void disconnect(String sessionId, boolean reconnect) {
@@ -307,15 +312,12 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             notifyPartnerLeft(partnerId);
         }
         
-        // Remove from queue if waiting
         if (roomManager.isWaiting(sessionId) && sessions.containsKey(sessionId)) {
             roomManager.removeFromQueue(sessions.get(sessionId));
         }
         
-        // Remove from paired users
         roomManager.removePair(sessionId);
         
-        // Remove from active sessions if not reconnecting
         if (!reconnect) {
             sessions.remove(sessionId);
         }
@@ -324,7 +326,6 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     private void notifyPartnerLeft(String partnerId) {
         if (partnerId != null && sessions.containsKey(partnerId)) {
             WebSocketSession partnerSession = sessions.get(partnerId).getSocket();
-            // Check if session is still open before sending message
             if (partnerSession != null && partnerSession.isOpen()) {
                 sendMessage(partnerSession, new Message("leave", "Người lạ đã rời đi", "system", null));
             } else {
@@ -342,18 +343,15 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             
             String messageJson = objectMapper.writeValueAsString(message);
             
-            // Kiểm tra kích thước tin nhắn trước khi gửi
             if (messageJson.length() > 750000) {
                 log.warn("Message too large to send, size: {} bytes", messageJson.length());
                 
-                // Nếu có hình ảnh, thử gửi tin nhắn không có hình ảnh
                 if (message.getImageData() != null && !message.getImageData().isEmpty()) {
                     log.info("Attempting to send message without image data");
                     message.setImageData(null);
                     message.setContent(message.getContent() + " [Hình ảnh quá lớn, không thể gửi]");
                     String reducedJson = objectMapper.writeValueAsString(message);
                     
-                    // Check session again before sending
                     if (session.isOpen()) {
                         session.sendMessage(new TextMessage(reducedJson));
                         return true;
@@ -363,14 +361,12 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                     }
                 }
                 
-                // Nếu có video, thử gửi tin nhắn không có video
                 if (message.getVideoData() != null && !message.getVideoData().isEmpty()) {
                     log.info("Attempting to send message without video data");
                     message.setVideoData(null);
                     message.setContent(message.getContent() + " [Video quá lớn, không thể gửi]");
                     String reducedJson = objectMapper.writeValueAsString(message);
                     
-                    // Check session again before sending
                     if (session.isOpen()) {
                         session.sendMessage(new TextMessage(reducedJson));
                         return true;
@@ -383,7 +379,6 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                 return false;
             }
             
-            // Final check before sending
             if (session.isOpen()) {
                 session.sendMessage(new TextMessage(messageJson));
                 return true;
@@ -394,6 +389,27 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         } catch (IOException e) {
             log.error("Error sending message: {}", e.getMessage(), e);
             return false;
+        }
+    }
+
+    private void broadcastStats() {
+        try {
+            Map<String, Object> stats = chatStatsService.getAllStats();
+            
+            Message statsMessage = new Message("stats_update", "Thống kê đã được cập nhật", "system", null);
+            statsMessage.setStatsData(stats);
+            
+            for (UserSession userSession : sessions.values()) {
+                if (userSession.getSocket() != null && userSession.getSocket().isOpen()) {
+                    try {
+                        sendMessage(userSession.getSocket(), statsMessage);
+                    } catch (Exception e) {
+                        log.error("Error sending stats to session {}: {}", userSession.getSessionId(), e.getMessage());
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("Error broadcasting stats: {}", e.getMessage());
         }
     }
 } 

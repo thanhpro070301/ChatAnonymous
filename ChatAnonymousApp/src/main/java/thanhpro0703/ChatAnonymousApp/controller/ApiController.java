@@ -24,16 +24,53 @@ public class ApiController {
     public ResponseEntity<Map<String, Object>> getBasicStats() {
         Map<String, Object> response = new HashMap<>();
         response.put("status", "online");
-        response.put("waitingUsers", roomManager.getWaitingCount());
-        response.put("activePairs", roomManager.getPairedCount());
-        response.put("onlineCount", roomManager.getWaitingCount() + (roomManager.getPairedCount() * 2));
-        response.put("chattingCount", roomManager.getPairedCount() * 2);
+        
+        int waitingUsers = roomManager.getWaitingCount();
+        int activePairs = roomManager.getPairedCount();
+        int onlineCount = chatStatsService.getActiveConnectionsCount();
+        
+        // Đảm bảo onlineCount không bao giờ là 0
+        if (onlineCount == 0) {
+            // Nếu có người waiting hoặc ghép cặp thì dùng cách tính cũ
+            if (waitingUsers > 0 || activePairs > 0) {
+                onlineCount = waitingUsers + (activePairs * 2);
+            } else {
+                // Nếu không có ai thì giả định ít nhất có 1 người
+                onlineCount = 1;
+            }
+            // Cập nhật lại thống kê sau khi tính toán
+            chatStatsService.updateActiveConnections(onlineCount);
+        }
+        
+        // Cập nhật các giá trị vào response
+        response.put("waitingUsers", waitingUsers);
+        response.put("activePairs", activePairs);
+        response.put("onlineCount", onlineCount);
+        response.put("chattingCount", activePairs * 2);
+        
         return ResponseEntity.ok(response);
     }
     
     @GetMapping("/stats/advanced")
     public ResponseEntity<Map<String, Object>> getAdvancedStats() {
-        return ResponseEntity.ok(chatStatsService.getAllStats());
+        Map<String, Object> stats = chatStatsService.getAllStats();
+        
+        // Đảm bảo onlineCount không bao giờ là 0
+        if ((Integer)stats.getOrDefault("onlineCount", 0) == 0) {
+            int waitingUsers = (Integer)stats.getOrDefault("waitingUsers", 0);
+            int activePairs = (Integer)stats.getOrDefault("activePairs", 0);
+            
+            if (waitingUsers > 0 || activePairs > 0) {
+                stats.put("onlineCount", waitingUsers + (activePairs * 2));
+            } else {
+                stats.put("onlineCount", 1);
+            }
+            
+            // Cập nhật lại thống kê
+            chatStatsService.updateActiveConnections((Integer)stats.get("onlineCount"));
+        }
+        
+        return ResponseEntity.ok(stats);
     }
     
     @GetMapping("/stats/hourly")
@@ -57,6 +94,9 @@ public class ApiController {
         // Thực hiện reset
         roomManager.resetAll();
         chatStatsService.resetStats();
+        
+        // Đảm bảo có ít nhất 1 người online sau khi reset
+        chatStatsService.updateActiveConnections(1);
         
         Map<String, Object> response = new HashMap<>();
         response.put("status", "success");
